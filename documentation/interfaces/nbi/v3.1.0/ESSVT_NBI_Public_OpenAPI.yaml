@@ -1,0 +1,2876 @@
+openapi: 3.1.0
+info:
+  title: ESSVT
+  version: 3.1.0
+servers:
+- url: "{scheme}://{url}:{port}"
+  variables:
+    scheme:
+      default: http
+      enum:
+      - http
+      - https
+    url:
+      default: localhost
+    port:
+      default: "8080"
+      enum:
+      - "8080"
+      - "443"
+- url: /
+tags:
+- name: Common
+  description: Groups all Common operations.
+- name: Executions
+  description: Groups all Execution operations.
+- name: Orders
+  description: Groups all Order operations.
+- name: Projects
+  description: Groups all Project operations.
+- name: Results
+  description: Groups all Result operations.
+- name: Runners
+  description: Groups all Runner operations.
+- name: Schedulers
+  description: Groups all Scheduler operations.
+paths:
+  /v1/common/openapi:
+    get:
+      tags:
+      - Common
+      summary: Download openapi file
+      description: Download openapi file which is public
+      operationId: DownloadOpenApi
+      responses:
+        "200":
+          description: The required resources are returned.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: byte
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/executions:
+    get:
+      tags:
+      - Executions
+      summary: query execution
+      operationId: queryExecution
+      parameters:
+      - name: executionName
+        in: query
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+        example: pipeline-execution-001
+      - name: parentId
+        in: query
+        description: "parent execution id, i.e. the id of execution being retried\n"
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: projectId
+        in: query
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: executionStatus
+        in: query
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: array
+          description: Filters result by execution status
+          items:
+            pattern: ^CREATED$|^PROCESSING$|^VALIDATED$|^STARTED$|^COMPLETED$|^ABORTED$
+            type: string
+      - name: sortPaginationExecution
+        in: query
+        description: Parameters user for sorting and pagination.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: object
+          properties:
+            sortBy:
+              pattern: ^start_time$|^complete_time$|^created_at$|^execution_name$|^total$
+              type: string
+              description: "Sort executions by field. Note: total refers to total\
+                \ test count"
+            sortOrder:
+              pattern: ^asc$|^desc$
+              type: string
+              description: Sets order direction. `sortBy` query must be set to function.
+                Default behaviour is result in ascending order
+            page:
+              minimum: 1
+              type: integer
+              description: Specify page number. Used for pagination. `limit` must
+                be set to function.
+            limit:
+              minimum: 1
+              type: integer
+              description: Limit number of entities returned.
+          example:
+            sortBy: start_time|complete_time|created_at
+            sortOrder: asc|desc
+            page: 1
+            limit: 5
+      responses:
+        "200":
+          description: successful operation
+          headers:
+            X-Total-Count:
+              description: Number of total entities available in the database
+              style: simple
+              explode: false
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Execution'
+        "400":
+          description: "all 4xx, 5xx errors"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - Executions
+      summary: Create new Execution
+      description: Create Execution Request
+      operationId: createExecution
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExecutionRequest'
+        required: true
+      responses:
+        "201":
+          description: Execution is created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateExecutionReponse'
+        "400":
+          description: "all 4xx, 5xx errors, e.g. Invalid input etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Executions
+      summary: Delete Executions by Project Id
+      description: "Delete a set of executions linked to this project. If the executionList\
+        \ parameter is given, the specific executions are deleted, otherwise the whole\
+        \ set of executions will be deleted."
+      operationId: deleteExecutionsByProjectId
+      parameters:
+      - name: projectId
+        in: query
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      - name: executionList
+        in: query
+        description: The execution id list. The Ids are separated by commas.
+        required: false
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            pattern: "^[a-z0-9]*$"
+            type: string
+        example:
+          oneOrder:
+            summary: Example of a single execution
+            value:
+            - 4c8f534ees12324sldj21s93kd93kda1c
+          multiOrders:
+            summary: Example of multiple executions
+            value:
+            - 4c8f534ees12324sldj21s93kd93kda1c
+            - 12wa434ees12324sldj21s93kd93kd231
+            - 78634ees12324sldj21s93kd93kd239s
+      responses:
+        "204":
+          description: The executions linked to this project are deleted
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/executions/orderStart:
+    post:
+      tags:
+      - Executions
+      summary: Create new Execution from Order
+      description: Create Execution Request From Order
+      operationId: createExecutionFromOrder
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExecutionFromOrderRequest'
+        required: true
+      responses:
+        "201":
+          description: Execution is created and not started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateExecutionReponse'
+        "202":
+          description: Execution is created and auto started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateExecutionReponse'
+        "400":
+          description: "all 4xx, 5xx errors, e.g. Invalid input etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/executions/{executionId}:
+    get:
+      tags:
+      - Executions
+      summary: get an execution by Execution Id
+      operationId: getByExecutionId
+      parameters:
+      - name: executionId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Execution'
+        "400":
+          description: "all 4xx, 5xx errors"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - Executions
+      summary: start an execution by Execution Id
+      operationId: startByExecutionId
+      parameters:
+      - name: executionId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "202":
+          description: successful operation
+        "400":
+          description: "all 4xx, 5xx errors"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Executions
+      summary: delete an execution by Execution Id
+      operationId: deleteByExecutionId
+      parameters:
+      - name: executionId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "204":
+          description: only executions in (CREATED/ABORTED/COMPLETED) status can be
+            deleted
+        "400":
+          description: "all 4xx, 5xx errors"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/executions/{executionId}/retry:
+    post:
+      tags:
+      - Executions
+      summary: Retry Execution
+      operationId: retryExecution
+      parameters:
+      - name: executionId
+        in: path
+        description: uuid of the execution
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetryExecutionRequest'
+        required: false
+      responses:
+        "201":
+          description: Retry execution is created and not started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateExecutionReponse'
+        "202":
+          description: Retry execution is created and auto started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateExecutionReponse'
+        "400":
+          description: "all 4xx, 5xx errors, e.g. Invalid input, Request was not polite\
+            \ enough, etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+      x-codegen-request-body-name: RetryExecutionRequest
+  /v1/executions/{executionId}/setAutoDelete:
+    put:
+      tags:
+      - Executions
+      summary: Set History Execution whether auto delete
+      description: Set History Execution whether auto delete
+      operationId: setAutoDelete
+      parameters:
+      - name: executionId
+        in: path
+        description: uuid of the execution
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAutoDeleteRequest'
+        required: true
+      responses:
+        "204":
+          description: Set autodelete successfully
+        "400":
+          description: "all 4xx, 5xx errors, e.g. Invalid input etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/executions/{executionId}/terminate:
+    post:
+      tags:
+      - Executions
+      summary: terminate Execution
+      operationId: terminateExecution
+      parameters:
+      - name: executionId
+        in: path
+        description: uuid of the execution
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "202":
+          description: Terminating executions (ONLY Executions in PROCESSING/VALIDATED/STARTED
+            can be terminated)
+        "400":
+          description: "all 4xx, 5xx errors, e.g. Invalid input, Request was not polite\
+            \ enough, etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+      x-codegen-request-body-name: StopExecutionRequest
+  /v1/orders:
+    get:
+      tags:
+      - Orders
+      summary: Query Orders by Project Id
+      description: Get a set of orders associated with this project
+      operationId: queryOrderByProjectId
+      parameters:
+      - name: projectId
+        in: query
+        description: The project that the orders linked to
+        required: true
+        style: form
+        explode: true
+        schema:
+          maxLength: 32
+          minLength: 1
+          pattern: "^[a-z0-9]*$"
+          type: string
+      - name: query
+        in: query
+        description: "fuzzy query input, the fuzzy query based on order name, description."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+        example: essvt-order
+      - name: sortPaginationExecution
+        in: query
+        description: Parameters user for sorting and pagination.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: object
+          properties:
+            sortBy:
+              pattern: ^modified_at$|^created_at$
+              type: string
+              description: Sort orders by project Id
+            sortOrder:
+              pattern: ^asc$|^desc$
+              type: string
+              description: Sets order direction. `sortBy` query must be set to function.
+                Default behaviour is result in ascending order
+            page:
+              minimum: 1
+              type: integer
+              description: Specify page number. Used for pagination. `limit` must
+                be set to function.
+            limit:
+              minimum: 1
+              type: integer
+              description: Limit number of entities returned.
+          example:
+            sortBy: ^modified_at$|^created_at$
+            sortOrder: asc|desc
+            page: 1
+            limit: 5
+      responses:
+        "200":
+          description: successful operation
+          headers:
+            X-Total-Count:
+              description: Number of total entities available in the database
+              style: simple
+              explode: false
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Orders
+      summary: Delete Orders by Project Id
+      description: "Delete a set of orders linked to this project.If the orderList\
+        \ parameter is given, the specific orders are deleted, otherwise the whole\
+        \ set of orders will be deleted."
+      operationId: deleteOrderByProjectId
+      parameters:
+      - name: projectId
+        in: query
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      - name: orderList
+        in: query
+        description: The order Id List. The Ids are separated by commas.
+        required: false
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            pattern: "^[a-z0-9]*$"
+            type: string
+        example:
+          oneOrder:
+            summary: Example of a single order
+            value:
+            - 4c8f534ees12324sldj21s93kd93kda1c
+          multiOrders:
+            summary: Example of multiple orders
+            value:
+            - 4c8f534ees12324sldj21s93kd93kda1c
+            - 12wa434ees12324sldj21s93kd93kd231
+            - 78634ees12324sldj21s93kd93kd239s
+      responses:
+        "204":
+          description: The orders linked to this project are deleted
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/orders/{orderId}:
+    get:
+      tags:
+      - Orders
+      summary: Get Order by Id
+      description: Get the specific order by order Id
+      operationId: getOrderById
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Orders
+      summary: Delete Order by Id
+      description: Delete the specific order by order Id
+      operationId: deleteOrderById
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "204":
+          description: The order is deleted.
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/projects:
+    get:
+      tags:
+      - Projects
+      summary: Query Project List
+      operationId: getProjectList
+      parameters:
+      - name: query
+        in: query
+        description: "fuzzy query input, the fuzzy query based on project name, description\
+          \ and author fields."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+        example: ESSVT-Project
+      - name: sortBy
+        in: query
+        description: Sort Projects by field
+        required: false
+        style: form
+        explode: true
+        schema:
+          pattern: ^(name|created_at|modified_at|case_number)$
+          type: string
+      - name: sortOrder
+        in: query
+        description: Sets order direction. `sortBy` query must be set to function.
+          Default behaviour is result in ascending order
+        required: false
+        style: form
+        explode: true
+        schema:
+          pattern: ^asc$|^desc$
+          type: string
+      - name: page
+        in: query
+        description: page number
+        required: false
+        style: form
+        explode: true
+        schema:
+          minimum: 1
+          type: integer
+        example: 1
+      - name: limit
+        in: query
+        description: The numbers of items to return.
+        required: false
+        style: form
+        explode: true
+        schema:
+          minimum: 1
+          type: integer
+        example: 10
+      - name: runnerName
+        in: query
+        description: The default runner name of the project.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+        example: eric-bss-essvt-runner
+      responses:
+        "200":
+          description: List all projects information successfully.
+          headers:
+            X-Total-Count:
+              description: Number of total entities available in the database
+              style: simple
+              explode: false
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    post:
+      tags:
+      - Projects
+      summary: Create Project
+      description: Create Project
+      operationId: createProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+        required: true
+      responses:
+        "201":
+          description: Create project successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        "400":
+          description: Create project error with invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/projects/{projectId}:
+    get:
+      tags:
+      - Projects
+      summary: Query By Project Id
+      operationId: getByProjectId
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "200":
+          description: Get project information successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    put:
+      tags:
+      - Projects
+      summary: Update Project Metadata
+      operationId: updateByProjectId
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: 8c8f534e98ff4c6084e97f69dd38d48c
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+        required: true
+      responses:
+        "200":
+          description: Update project information successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Projects
+      summary: Delete By Project Id
+      operationId: deleteByProjectId
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: 8c8f534e98ff4c6084e97f69dd38d48c
+      - name: forceDelete
+        in: query
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: boolean
+          example: true
+          default: false
+      responses:
+        "204":
+          description: Delete project successfully.
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/projects/{projectId}/content:
+    put:
+      tags:
+      - Projects
+      summary: Upload Project Content
+      operationId: uploadByProjectId
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: 8c8f534e98ff4c6084e97f69dd38d48c
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadProjectContentRequest'
+        required: true
+      responses:
+        "204":
+          description: Upload project content successfully.
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/projects/{projectId}/content/delete:
+    post:
+      tags:
+      - Projects
+      summary: Delete Project file by path
+      operationId: deleteFileByProjectId
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: 8c8f534e98ff4c6084e97f69dd38d48c
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteProjectContentRequest'
+        required: true
+      responses:
+        "204":
+          description: delete project file successfully.
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/projects/{projectId}/default-runner:
+    get:
+      tags:
+      - Projects
+      summary: Get Default Runner by Project Id
+      operationId: getDefaultRunnerByProjectId
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "200":
+          description: Get project default runner information successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Runner'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Projects
+      summary: Delete Default Runner by Project Id
+      operationId: deleteDefaultRunnerByProjectId
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "204":
+          description: Delete project default runner name successfully.
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/projects/{projectId}/default-runner/{runnerName}:
+    put:
+      tags:
+      - Projects
+      summary: Set Project Default Runner by Project Id
+      operationId: setDefaultRunnerByProjectId
+      parameters:
+      - name: projectId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: 8c8f534e98ff4c6084e97f69dd38d48c
+      - name: runnerName
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: eric-bss-essvt-runner
+      responses:
+        "204":
+          description: Set project default runner name successfully.
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/results/{executionId}/{fileType}:
+    get:
+      tags:
+      - Results
+      summary: Get the specified result files
+      operationId: DownloadResultsRequest
+      parameters:
+      - name: executionId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      - name: fileType
+        in: path
+        description: "Required result file type. If it's all, the compressed zip file\
+          \ with all 3 files are returned. - log.html - report.html - output.xml -\
+          \ all"
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: all
+      responses:
+        "200":
+          description: The required resources are returned.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: byte
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/runners:
+    get:
+      tags:
+      - Runners
+      summary: Query Runner List
+      operationId: getRunnerList
+      parameters:
+      - name: query
+        in: query
+        description: "fuzzy query input, the fuzzy query based on runner name, description\
+          \ and image fields."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+        example: eric-bss-essvt-runner
+      - name: page
+        in: query
+        description: page number
+        required: false
+        style: form
+        explode: true
+        schema:
+          minimum: 1
+          type: integer
+        example: 1
+      - name: limit
+        in: query
+        description: The numbers of items to return.
+        required: false
+        style: form
+        explode: true
+        schema:
+          minimum: 1
+          type: integer
+        example: 10
+      responses:
+        "200":
+          description: List all runners information successfully.
+          headers:
+            X-Total-Count:
+              description: Number of total entities available in the database
+              style: simple
+              explode: false
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Runner'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/runners/{runnerId}:
+    get:
+      tags:
+      - Runners
+      summary: Query By Runner Id
+      operationId: getByRunnerId
+      parameters:
+      - name: runnerId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "200":
+          description: List runner information successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Runner'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/schedulers:
+    post:
+      tags:
+      - Schedulers
+      summary: Create Scheduler
+      description: Create a new Scheduler
+      operationId: createScheduler
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSchedulerRequest'
+        required: true
+      responses:
+        "201":
+          description: Scheduler is created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSchedulerResponse'
+        "400":
+          description: "Bad Request, e.g. Invalid input etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Schedulers
+      summary: Delete Schedulers by Order Id
+      description: "Delete a set of schedulers linked to this order. If the schedulerList\
+        \ parameter is given, the specific schedulers are deleted, otherwise the whole\
+        \ set of schedulers will be deleted."
+      operationId: deleteSchedulersByOrderId
+      parameters:
+      - name: orderId
+        in: query
+        required: true
+        style: form
+        explode: true
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      - name: schedulerList
+        in: query
+        description: The scheduler Id List. The Ids are separated by commas.
+        required: false
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            pattern: "^[a-z0-9]*$"
+            type: string
+        example:
+          oneScheduler:
+            summary: Example of a single scheduler
+            value:
+            - 4c8f534ees12324sldj21s93kd93kda1c
+          multiSchedulers:
+            summary: Example of multiple schedulers
+            value:
+            - 4c8f534ees12324sldj21s93kd93kda1c
+            - 12wa434ees12324sldj21s93kd93kd231
+            - 78634ees12324sldj21s93kd93kd239s
+      responses:
+        "204":
+          description: The specified scheduler are deleted
+        "400":
+          description: "Bad Request, e.g. Invalid input etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/schedulers/order/{orderId}:
+    get:
+      tags:
+      - Schedulers
+      summary: Query Schedulers By OrderId
+      description: Get schedulers associated with an order and/or name and description
+        matching a query
+      operationId: getSchedulersByOrderId
+      parameters:
+      - name: orderId
+        in: path
+        description: The order that the schedulers linked to
+        required: true
+        style: simple
+        explode: false
+        schema:
+          maxLength: 32
+          minLength: 1
+          pattern: "^[a-z0-9]*$"
+          type: string
+      - name: query
+        in: query
+        description: "fuzzy query input, the fuzzy query based on order name, description."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+        example: essvt-scheduler
+      - name: sortPaginationParams
+        in: query
+        description: Parameters user for sorting and pagination.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: object
+          properties:
+            sortBy:
+              pattern: ^modified_at$|^created_at$
+              type: string
+              description: Sort orders by project Id
+            sortOrder:
+              pattern: ^asc$|^desc$
+              type: string
+              description: Sets order direction. `sortBy` query must be set to function.
+                Default behaviour is result in ascending order
+            page:
+              minimum: 1
+              type: integer
+              description: Specify page number. Used for pagination. `limit` must
+                be set to function.
+            limit:
+              minimum: 1
+              type: integer
+              description: Limit number of entities returned.
+          example:
+            sortBy: ^modified_at$|^created_at$
+            sortOrder: asc|desc
+            page: 1
+            limit: 5
+      responses:
+        "200":
+          description: successful operation
+          headers:
+            X-Total-Count:
+              description: Number of total entities available in the database
+              style: simple
+              explode: false
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scheduler'
+        "400":
+          description: "Bad Request, e.g. Invalid input etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/schedulers/project/{projectId}:
+    get:
+      tags:
+      - Schedulers
+      summary: Query Schedulers By ProjectId
+      description: Get schedulers associated with an project and/or name and description
+        matching a query
+      operationId: getSchedulersByProjectId
+      parameters:
+      - name: projectId
+        in: path
+        description: The projectId that the schedulers linked to
+        required: true
+        style: simple
+        explode: false
+        schema:
+          maxLength: 32
+          minLength: 1
+          pattern: "^[a-z0-9]*$"
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      - name: query
+        in: query
+        description: "fuzzy query input, the fuzzy query based on scheduler name,\
+          \ description."
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+        example: essvt-scheduler
+      - name: sortPaginationParams
+        in: query
+        description: Parameters user for sorting and pagination.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: object
+          properties:
+            sortBy:
+              pattern: ^modified_at$|^created_at$
+              type: string
+              description: Sort schedulers
+            sortOrder:
+              pattern: ^asc$|^desc$
+              type: string
+              description: Sets order direction. `sortBy` query must be set to function.
+                Default behaviour is result in ascending order
+            page:
+              minimum: 1
+              type: integer
+              description: Specify page number. Used for pagination. `limit` must
+                be set to function.
+            limit:
+              minimum: 1
+              type: integer
+              description: Limit number of entities returned.
+          example:
+            sortBy: ^modified_at$|^created_at$
+            sortOrder: asc|desc
+            page: 1
+            limit: 5
+      responses:
+        "200":
+          description: successful operation
+          headers:
+            X-Total-Count:
+              description: Number of total entities available
+              style: simple
+              explode: false
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scheduler'
+        "400":
+          description: "Bad Request, e.g. Invalid input etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/schedulers/trigger/{schedulerId}:
+    post:
+      tags:
+      - Schedulers
+      summary: Trigger Scheduler
+      description: Trigger specific Scheduler manually
+      operationId: trigger
+      parameters:
+      - name: schedulerId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "202":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchedulerTriggerResponse'
+        "400":
+          description: "Bad Request, e.g. Invalid input etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+  /v1/schedulers/{schedulerId}:
+    get:
+      tags:
+      - Schedulers
+      summary: Get Scheduler by Id
+      description: Get the specific scheduler by Scheduler Id
+      operationId: getSchedulerById
+      parameters:
+      - name: schedulerId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scheduler'
+        "400":
+          description: "Bad Request, e.g. Invalid input etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    put:
+      tags:
+      - Schedulers
+      summary: Update Scheduler by Id
+      description: Update the specific Scheduler content
+      operationId: updateSchedulerById
+      parameters:
+      - name: schedulerId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSchedulerRequest'
+        required: true
+      responses:
+        "200":
+          description: Scheduler is updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scheduler'
+        "400":
+          description: "Bad Request, e.g. Invalid input etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Schedulers
+      summary: Delete Scheduler by Id
+      description: Delete the specific scheduler by Scheduler Id
+      operationId: deleteSchedulerById
+      parameters:
+      - name: schedulerId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+        example: 8c8f534e98ff4c6084e97f69dd38d48c
+      responses:
+        "204":
+          description: The scheduler is deleted.
+        "400":
+          description: "Bad Request, e.g. Invalid input etc."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "403":
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "404":
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        "500":
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+      security:
+      - bearerAuth: []
+components:
+  schemas:
+    AddProjectMemberRequest:
+      type: object
+      properties:
+        memberId:
+          type: string
+          example: 9dd3834e98ff4c8c8f534f69dd38d48c
+    CommandLineOptions:
+      type: object
+      properties:
+        options:
+          type: array
+          description: "the command line options which can be appended behind executor,\
+            \ and if the executor is pabot, pabot-related options must come first."
+          items:
+            pattern: "^[A-Za-z0-9-_]*$"
+            type: string
+        variables:
+          type: array
+          description: the command line options values which can be append to executor
+            with parameter -v
+          items:
+            pattern: "^[A-Za-z0-9-_]*:[A-Za-z0-9-_]*$"
+            type: string
+    CreateExecutionFromOrderRequest:
+      required:
+      - executionName
+      - orderId
+      type: object
+      properties:
+        orderId:
+          maxLength: 32
+          minLength: 1
+          pattern: "^[A-Za-z0-9-_]*$"
+          type: string
+          description: The relavant order Id.
+        executionName:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9-_]*$"
+          type: string
+          description: "execution name which defined by user, should only contain\
+            \ number, upper and lower case letters, hyphens and underscores."
+        runnerName:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9-_]*$"
+          type: string
+          description: "runner name which defined by user, should only contain number,\
+            \ upper and lower case letters, hyphens and underscores. It's a conditional\
+            \ field, must have one in execution or project, if both are present, take\
+            \ the one in execution first."
+        autoStart:
+          type: boolean
+          example: true
+          default: false
+    CreateExecutionReponse:
+      type: object
+      properties:
+        executionId:
+          type: string
+          example: 3fa85f6457174562b3fc2c963f66afa6
+        executionName:
+          type: string
+          example: Test-Execution-12345
+    CreateExecutionRequest:
+      required:
+      - executionName
+      - executor
+      - projectId
+      type: object
+      properties:
+        projectId:
+          maxLength: 32
+          minLength: 1
+          pattern: "^[a-z0-9]*$"
+          type: string
+          description: project is to be executed.
+        executionName:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9-_]*$"
+          type: string
+          description: "execution name which defined by user, should only contain\
+            \ number, upper and lower case letters, hyphens and underscores."
+        executor:
+          pattern: ^robot$|^pabot$
+          type: string
+          description: which executor will be used.
+        runnerName:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9-_]*$"
+          type: string
+          description: "runner name which defined by user, should only contain number,\
+            \ upper and lower case letters, hyphens and underscores. It's a conditional\
+            \ field, must have one in execution or project, if both are present, take\
+            \ the one in execution first."
+        commandLine:
+          $ref: '#/components/schemas/CommandLineOptions'
+    CreateProjectRequest:
+      required:
+      - name
+      - projectVersion
+      type: object
+      properties:
+        name:
+          pattern: "^[A-Za-z0-9_\\-]{1,255}$"
+          type: string
+        author:
+          maxLength: 255
+          minLength: 1
+          type: string
+        projectVersion:
+          pattern: "^(0{1}|[1-9]{1}[0-9]{0,2})\\.(0{1}|[1-9]{1}[0-9]{0,2})\\.(0{1}|[1-9]{1}[0-9]{0,2})(-(0{1}|[1-9]{1}[0-9]{0,2})){0,1}$"
+          type: string
+          description: "Project version, the range is 0.0.0-0 - 999.999.999-999 without\
+            \ 0 leading."
+        allowedExtensions:
+          pattern: "^(?:[a-zA-Z0-9]+(?:,[a-zA-Z0-9]+)*|\\*)?$"
+          type: string
+          description: Which file extensions to allow read/write for.
+        description:
+          maxLength: 2147483647
+          minLength: 0
+          type: string
+      description: Create Project Request Payload
+      example:
+        name: Project1
+        author: Jerry
+        projectVersion: v1.0
+        Description: Project description
+    CreateSchedulerRequest:
+      required:
+      - cron
+      - orderId
+      - schedulerName
+      type: object
+      properties:
+        schedulerName:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9-_]*$"
+          type: string
+          description: "Scheduler name defined by user, should only contain number,\
+            \ upper and lower case letters, hyphens and underscores."
+        description:
+          maxLength: 10000
+          minLength: 0
+          type: string
+        orderId:
+          maxLength: 32
+          minLength: 1
+          pattern: "^[a-z0-9]*$"
+          type: string
+          description: The order Id that this scheduler will execute on trigger.
+        cron:
+          type: string
+          description: The cron expression for scheduler.
+          example: 0 0 19 6 * ?
+        enable:
+          type: boolean
+          description: Scheduler switch Settings.
+          default: false
+    CreateSchedulerResponse:
+      type: object
+      properties:
+        schedulerId:
+          type: string
+          example: 3fa85f6457174562b3fc2c963f66afa7
+        schedulerName:
+          type: string
+          example: essvt-demo-scheduler01
+    DeleteProjectContentRequest:
+      type: object
+      properties:
+        path:
+          type: string
+          description: The relative path for a specific file with respect to the project
+            directory
+          example: test/tc_1.robot
+        paths:
+          type: array
+          description: An array of relative paths for multiple files with respect
+            to the project directory
+          example:
+          - test/tc_1.robot
+          - test/tc_2.robot
+          items:
+            type: string
+    Execution:
+      type: object
+      properties:
+        executionId:
+          type: string
+          example: 3fa85f6457174562b3fc2c963f66afa6
+        executionName:
+          type: string
+          example: Test-Execution-12345
+        projectId:
+          type: string
+          example: c223fbf948b847cc9e9cbcf8e5749e88
+        runnerName:
+          type: string
+          example: eric-bss-essvt-runner-0
+        executor:
+          type: string
+          example: robot
+        parentId:
+          type: string
+          description: id of the execution which has been retried
+        executeStatus:
+          type: string
+          example: CREATED
+        startTime:
+          type: string
+          format: date-time
+          example: 2021-10-25T15:45:13.541Z
+        completeTime:
+          type: string
+          format: date-time
+          example: 2021-10-25T15:48:13.541Z
+        elapsedTime:
+          type: string
+          example: "123"
+        total:
+          type: integer
+          example: 4
+        pass:
+          type: integer
+          example: 2
+        fail:
+          type: integer
+          example: 1
+        skip:
+          type: integer
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          example: 2021-10-25T15:40:13.541Z
+        createdBy:
+          type: string
+          example: testUser
+        reportUrl:
+          type: string
+          example: /data/xxx/xxx/report.html
+        outputUrl:
+          type: string
+          example: /data/xxx/xxx/output.xml
+        logUrl:
+          type: string
+          example: /data/xxx/xxx/log.html
+        dryrunCommand:
+          type: string
+          example: robot xxxxx -dryrun
+        normalrunCommand:
+          type: string
+          example: robot xxxxx -listener
+        commandLine:
+          $ref: '#/components/schemas/CommandLineOptions'
+        trigger:
+          type: string
+          example: project
+        triggeredBy:
+          type: string
+          example: testUser
+        orderId:
+          type: string
+          example: 345235f948b847cc9e9cbcf8e5749e88
+        orderName:
+          type: string
+          example: execution-from-order
+        dataSource:
+          type: string
+        runtimeError:
+          type: string
+        autoDelete:
+          type: boolean
+        retainForever:
+          type: boolean
+        retentionDays:
+          type: integer
+        leftRetentionDays:
+          type: integer
+    Order:
+      type: object
+      properties:
+        orderId:
+          type: string
+          example: 3fa85f6457174562b3fc2c963f66afa7
+        orderName:
+          type: string
+          example: essvt-demo-order01
+        description:
+          type: string
+          example: Test for essvt
+        projectId:
+          type: string
+          example: c223fbf948b847cc9e9cbcf8e5749e88
+        projectChecksum:
+          type: string
+          example: ""
+        executor:
+          type: string
+          example: robot
+        pabotOptions:
+          type: array
+          items:
+            type: string
+            example: --testlevelsplit
+        robotOptions:
+          type: array
+          items:
+            type: string
+            example: --loglevel debug
+        robotVariables:
+          type: array
+          items:
+            type: string
+            example: -v aa:bb
+        testDataType:
+          type: string
+          example: suite
+        testDataList:
+          type: array
+          description: The selected test suite( file and folder) or test case list.
+          items:
+            $ref: '#/components/schemas/TargetTestData'
+        testDataConvertedOutput:
+          type: string
+          example: ""
+        createdAt:
+          type: string
+          format: date-time
+          example: 2021-10-25T15:45:13.541Z
+        createdBy:
+          type: string
+          example: GUI
+        modifiedAt:
+          type: string
+          format: date-time
+          example: 2021-10-25T15:48:13.541Z
+    ProblemDetails:
+      required:
+      - detail
+      type: object
+      properties:
+        type:
+          type: string
+          description: "A URI reference according to IETF RFC 3986 [5] that identifies\
+            \ the problem type. It is encouraged that the URI provides human-readable\
+            \ documentation for the problem (e.g. using HTML) when dereferenced. When\
+            \ this member is not present, its value is assumed to be \"about:blank\"\
+            .\n"
+          format: URI
+        title:
+          type: string
+          description: "A short, human-readable summary of the problem type. It should\
+            \ not change from occurrence to occurrence of the problem, except for\
+            \ purposes of localization. If type is given and other than \"about:blank\"\
+            , this attribute shall also be provided. A short, human-readable summary\
+            \ of the problem type.  It SHOULD NOT change from occurrence to occurrence\
+            \ of the problem, except for purposes of localization (e.g., using proactive\
+            \ content negotiation; see [RFC7231], Section 3.4).\n"
+        status:
+          type: integer
+          description: "The HTTP status code for this occurrence of the problem. The\
+            \ HTTP status code ([RFC7231], Section 6) generated by the origin server\
+            \ for this occurrence of the problem.\n"
+        detail:
+          type: string
+          description: |
+            A human-readable explanation specific to this occurrence of the problem.
+        instance:
+          type: string
+          description: |
+            A URI reference that identifies the specific occurrence of the problem. It may yield further information if dereferenced.
+          format: URI
+      description: "The definition of the general \"ProblemDetails\" data structure\
+        \ from IETF RFC 7807 [19] is reproduced in this structure. Compared to the\
+        \ general framework defined in IETF RFC 7807 [19], the \"status\" and \"detail\"\
+        \ attributes are mandated to be included by the present document, to ensure\
+        \ that the response contains additional textual information about an error.\
+        \ IETF RFC 7807 [19] foresees extensibility of the \"ProblemDetails\" type.\
+        \ It is possible that particular APIs in the present document, or particular\
+        \ implementations, define extensions to define additional attributes that\
+        \ provide more information about the error. The description column only provides\
+        \ some explanation of the meaning to Facilitate understanding of the design.\
+        \ For a full description, see IETF RFC 7807 [19].\n"
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Project ID
+          example: 8c8f534e98ff4c6084e97f69dd38d48c
+        name:
+          type: string
+          description: Project Name
+          example: ESSVT-Project
+        author:
+          type: string
+          description: Project Author
+          example: Jerry
+        projectVersion:
+          type: string
+          description: Project Version
+          example: 1.0.0-1
+        description:
+          type: string
+          description: Project Description
+          example: This is project description.
+        createdAt:
+          type: string
+          description: Project Create Time
+          format: date-time
+          example: 2021-10-25T15:48:13.541Z
+        createdBy:
+          type: string
+          description: Project Created By User
+          example: Tom
+        defaultRunnerName:
+          type: string
+          description: The Runner Name Binded To The Project
+          example: eric-bss-essvt-runner
+        caseNumber:
+          type: integer
+          description: The Total Case Number In The Project
+          example: 10
+        allowedExtensions:
+          type: string
+          description: The allowed file extensions
+          example: "robot,txt,json,yml,yaml"
+        autoUpdateEnabled:
+          type: boolean
+          description: Indicates whether the project should stay on the legacy runner
+            or be updated to the new runner upon system upgrade
+          example: true
+        modifiedAt:
+          type: string
+          description: Project Modified Time
+          format: date-time
+          example: 2021-10-28T15:48:13.541Z
+    RetryExecutionRequest:
+      type: object
+      properties:
+        autoStart:
+          type: boolean
+          example: true
+          default: true
+        rerunFailed:
+          type: boolean
+          example: false
+          default: false
+        executionName:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9-_]*$"
+          type: string
+          description: "execution name is optional, will be auto-generated if not\
+            \ provided, e.g. the auto-generated name for execution[execution_pipeline_001]\
+            \ will be \"execution_pipeline_001_r1\", r1 means 1st retry, r2 for the\
+            \ second, and so on.\n"
+    Runner:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Runner ID
+          example: 8c8f534e98ff4c6084e97f69dd38d48c
+        name:
+          type: string
+          description: Runner Name
+          example: ESSVT Robot Runner
+        description:
+          type: string
+          description: Runner Description
+          example: Robot Framework Run Time
+        image:
+          type: string
+          description: Runner Image
+          example: armdocker.rnd.ericsson.se/proj-btap-released/bss-robot-base-image-small:0.3.2
+        requestCpu:
+          type: integer
+          description: "requests.cpu, unit is mCPU 100m=0.1CPU"
+          example: 1000
+        requestMemory:
+          type: integer
+          description: "requests.memory, unit is Mi"
+          example: 1024
+        limitCpu:
+          type: integer
+          description: "limits.cpu, unit is mCPU 100m=0.1CPU"
+          example: 2000
+        limitMemory:
+          type: integer
+          description: "limits.memory, unit is Mi"
+          example: 2048
+        pullPolicy:
+          type: string
+          description: image pull policy
+          example: IfNotPresent/Always/Never
+        status:
+          type: string
+          description: Runner Status
+          example: DEPLOYING/PENDING/RESTARTING/ACTIVE/ERROR
+        errorMessage:
+          type: string
+          description: Runner Error Message
+          example: ""
+        createdAt:
+          type: string
+          description: Runner Create Time
+          format: date-time
+          example: 2022-03-21T15:48:13.541Z
+        createdBy:
+          type: string
+          description: Runner Created By User
+          example: Tom
+        projectNumber:
+          type: integer
+          description: Project number which bind to current runner
+          example: 3
+    Scheduler:
+      type: object
+      properties:
+        schedulerId:
+          type: string
+          example: 3fa85f6457174562b3fc2c963f66afa7
+        schedulerName:
+          type: string
+          example: essvt-demo-scheduler01
+        orderId:
+          type: string
+          example: d2rfgf6457174562b3fc2c963f66afa7
+        orderName:
+          type: string
+          example: essvt-order
+        description:
+          type: string
+          example: Test scheduler for essvt
+        cron:
+          type: string
+          example: 0 0 19 6 * ?
+        enable:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+          example: 2021-10-25T15:45:13.541Z
+        createdBy:
+          type: string
+          example: GUI
+        modifiedAt:
+          type: string
+          format: date-time
+          example: 2021-10-25T15:48:13.541Z
+    SchedulerTriggerResponse:
+      type: object
+      properties:
+        executionId:
+          type: string
+          example: 3fa85f6457174562b3fc2c963f66afa6
+        executionName:
+          type: string
+          example: Test-Execution-12345
+    TargetTestData:
+      required:
+      - name
+      - path
+      type: object
+      properties:
+        name:
+          type: string
+          description: The suite name or test case name.
+          example: TC_001
+        path:
+          type: string
+          description: A relative path of the test case source file.
+          example: demo\folder01\file01.robot
+    UdateProjectMemberRequest:
+      type: object
+      properties:
+        roles:
+          type: array
+          items:
+            type: object
+            properties:
+              roleName:
+                type: string
+                example: project_member
+    UpdateAutoDeleteRequest:
+      type: object
+      properties:
+        autoDelete:
+          type: boolean
+          example: true
+          default: true
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          pattern: "^[A-Za-z0-9_\\-]{1,255}$"
+          type: string
+        author:
+          maxLength: 255
+          minLength: 1
+          type: string
+        projectVersion:
+          pattern: "^(0{1}|[1-9]{1}[0-9]{0,2})\\.(0{1}|[1-9]{1}[0-9]{0,2})\\.(0{1}|[1-9]{1}[0-9]{0,2})(-(0{1}|[1-9]{1}[0-9]{0,2})){0,1}$"
+          type: string
+          description: "Project version, the range is 0.0.0-0 - 999.999.999-999 without\
+            \ 0 leading."
+        allowedExtensions:
+          pattern: "^(?:[a-zA-Z0-9]+(?:,[a-zA-Z0-9]+)*|\\*)?$"
+          type: string
+          description: Which file extensions to allow read/write for.
+        description:
+          maxLength: 2147483647
+          minLength: 0
+          type: string
+      description: Update Project Request Payload
+      example:
+        name: Project1
+        author: Jimmy
+        projectVersion: v2.0
+        Description: Update Project description
+    UpdateSchedulerRequest:
+      type: object
+      properties:
+        schedulerName:
+          maxLength: 255
+          minLength: 1
+          pattern: "^[A-Za-z0-9-_]*$"
+          type: string
+          description: "Scheduler name defined by user, should only contain number,\
+            \ upper and lower case letters, hyphens and underscores."
+        description:
+          maxLength: 10000
+          minLength: 0
+          type: string
+        orderId:
+          maxLength: 32
+          minLength: 1
+          pattern: "^[a-z0-9]*$"
+          type: string
+          description: The order Id that this scheduler will execute on trigger.
+        cron:
+          type: string
+          description: The cron expression for scheduler.
+          example: 0 0 19 6 * ?
+        enable:
+          type: boolean
+          description: Scheduler switch Settings.
+          default: false
+    UploadProjectContentRequest:
+      type: object
+      properties:
+        filename:
+          type: array
+          items:
+            type: string
+            format: binary
+        folderPath:
+          type: string
+          description: Local project content path to write new files. Leaving this
+            empty will override all files.
+      description: https://swagger.io/docs/specification/describing-request-body/file-upload/
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

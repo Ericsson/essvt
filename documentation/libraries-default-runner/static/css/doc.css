@@ -1,0 +1,90 @@
+body, html {
+    margin: 0;
+    padding-top: 60px;
+    overflow: hidden;
+    height: 100%;
+}
+
+#header {
+    width:100%;
+    height:60px;
+    line-height:60px;
+    position:absolute;
+    top:0;
+    left:0;
+    background-color: rgb(0, 0, 0);
+    font-size: 170%;
+    font-weight: bold;
+}
+
+#linkastext {
+    text-decoration: none;
+    color: rgb(153, 153, 153);
+    background: rgb(0, 0, 0, 0);
+    margin-left: 5px;
+}
+#footer {
+    width:100%;
+    height:1.5em;
+    position:fixed;
+    bottom:0;
+    left:0;
+    background:#000;
+    color: #999;
+    font-size: 90%;
+}
+
+#version {
+    position: absolute;
+    right: 0; 
+    margin-right: 10px;
+}
+
+#left {
+    position: absolute;
+    top: 60px;
+    bottom: 0;
+    height: calc(100% - 5em);
+    width: 20%;
+    overflow-y: scroll;
+    margin-left: 5px;
+}
+
+#fullpage {
+    position: absolute;
+    top: 60px;
+    bottom: 0;
+    right: 0;
+    overflow-y: scroll;
+    height: 90%;
+    width: 100%;
+}
+
+#right {
+    position: absolute;
+    top: 60px;
+    bottom: 0;
+    right: 0;
+    overflow-y: scroll;
+    height: 90%;
+    width: 80%;
+}
+
+table.padded-table {
+    margin-left: 10px;
+}
+table td {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+table th {
+    padding-left: 10px;
+}
+
+.keyword, .overview {
+    margin-left: 20px;
+}
+
+.search-container {
+    margin: 10px;
+}
