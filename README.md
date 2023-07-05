@@ -6,7 +6,7 @@ One of ESSVT's key features is its lightweight and user-friendly interface (GUI)
 
 ## ESSVT - NBI OpenAPI
 
-All ESSVT operations that can be done in the GUI can also be done using the NBI REST rest interface. ESSVT  utilizes OpenAPI to implement a REST NBI interface. The interface for instance supports operations to trigger execution, get execution info, terminate and re-run execution. 
+All ESSVT operations that can be done in the GUI can also be done using the NBI REST interface. ESSVT  utilizes OpenAPI to implement a REST NBI interface. The interface for instance supports operations to trigger execution, get execution info, terminate and re-run execution. 
 
 The OpenAPI definition for ESSVT NBI is available in this repository. 
 
